@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+    <title>index</title>
+    <meta name="description" content="" />
+    <meta name="author" content="Russell Morgan" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <link rel="stylesheet" type="text/css" href="css/styles.css" />
+  </head>
+
+  <body>
+    <header>
+            <p id="webcheck"></p>
+        <script>
+            if (typeof(Storage) !== "undefined") {
+                document.getElementById("webcheck").innerHTML = "History Data will be saved locally."
+            } else {
+                document.getElementById("webcheck").innerHTML = "WebStorage is not available on your browser, so your history is limited to one, and will delete itself when you close your browser./nClick on a thumbnail to save the ISBN to history."
+            }
+        </script>
+        <p>If the scanner stops working, reload the page.</p><button onclick="location.reload(true);">Reload From Server</button>
+    </header>
+    <section id="container" class="container">
+        <h3>Scanner</h3>
+        <div id="interactive" class="viewport"></div>
+        <div id="result_strip">
+                <ul id="thumb" class="thumbnails"></ul>
+                <ul class="collector"></ul>
+              </div>
+        <div class="controls">
+            <fieldset class="input-group">
+                <button class="stop">Stop</button>
+                <label>
+                    <span>Quantity</span>
+                    <input id="q" type="text"></input>
+                </label>
+                <label>
+                    <span>Direction</span>
+                    <select id="d" type="text">
+                        <option value="add">Add</option>
+                        <option value="remove">Remove</option>
+                    </select>
+                </label>
+                <label>
+                    <input type="text" id="isbnLanding" value="Most recent scan ISBN will appear here."></input>
+                </label>
+                <button id="scanToHButton" onclick="scanToHistory()">Scan To History</button>
+            </fieldset>
+            <fieldset class="reader-config-group">
+                <div class="controlsRow"><div class="controlsColumns"><label>
+                    <span>Barcode-Type</span>
+                    <select name="decoder_readers">
+                        <option value="code_128" selected="selected">Code 128</option>
+                        <option value="code_39">Code 39</option>
+                        <option value="code_39_vin">Code 39 VIN</option>
+                        <option value="ean">EAN</option>
+                        <option value="ean_extended">EAN-extended</option>
+                        <option value="ean_8">EAN-8</option>
+                        <option value="upc">UPC</option>
+                        <option value="upc_e">UPC-E</option>
+                        <option value="codabar">Codabar</option>
+                        <option value="i2of5">Interleaved 2 of 5</option>
+                        <option value="2of5">Standard 2 of 5</option>
+                        <option value="code_93">Code 93</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Resolution (width)</span>
+                    <select name="input-stream_constraints">
+                        <option value="320x240">320px</option>
+                        <option selected="selected" value="640x480">640px</option>
+                        <option value="800x600">800px</option>
+                        <option value="1280x720">1280px</option>
+                        <option value="1600x960">1600px</option>
+                        <option value="1920x1080">1920px</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Patch-Size</span>
+                    <select name="locator_patch-size">
+                        <option value="x-small">x-small</option>
+                        <option value="small">small</option>
+                        <option selected="selected" value="medium">medium</option>
+                        <option value="large">large</option>
+                        <option value="x-large">x-large</option>
+                    </select>
+                </label></div>
+                <div class="controlsColumns"><label>
+                    <span>Half-Sample</span>
+                    <input type="checkbox" checked="checked" name="locator_half-sample" />
+                </label>
+                <label>
+                    <span>Workers</span>
+                    <select name="numOfWorkers">
+                        <option value="2">2</option>
+                        <option selected="selected" value="4">4</option>
+                        <option value="8">8</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Camera</span>
+                    <select name="input-stream_constraints" id="deviceSelection">
+                    </select>
+                </label></div></div>
+                <label style="display: none">
+                    <span>Zoom</span>
+                    <select name="settings_zoom"></select>
+                </label>
+                <label style="display: none">
+                    <span>Torch</span>
+                    <input type="checkbox" name="settings_torch" />
+                </label>
+            </fieldset>
+        </div>
+      
+    </section>
+
+    <footer>
+            <h2 id="historyLabel">History</h2>
+            <span><button onclick="clearHistory()">Clear History</button><button onclick="deleteLastEntry()">Remove Last Entry</button><button id="export_button" style="display: none;" onclick="handleExportButton()">Export History</button><button id="import_button" style="display: none;" onclick="handleImportButton()">Import Title/ISBN Data</button><button id="authorize_button" style="display: none;">Authorize</button><button id="signout_button" style="display: none;">Sign Out</button></span>
+            <pre id="content" style="white-space: pre-wrap;"></pre>
+            <div id="history_list_container"></div>
+        </footer>
+
+        <script type="text/javascript">
+            // Client ID and API key from the Developer Console
+            var CLIENT_ID = '967247119288-evfph6p5f3j9u1j9l3rs35ph5tei2kdv.apps.googleusercontent.com';
+      
+            // Array of API discovery doc URLs for APIs used by the quickstart
+            var DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+      
+            // Authorization scopes required by the API; multiple scopes can be
+            // included, separated by spaces.
+            var SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+      
+            var authorizeButton = document.getElementById('authorize_button');
+            var signoutButton = document.getElementById('signout_button');
+            var importButton = document.getElementById('import_button');
+            var exportButton = document.getElementById('export_button');
+
+            function handleImportButton() {
+                importFromSheet(loadArray);
+            }
+
+            function handleExportButton() {
+                importFromSheet(exportToSheets);
+            }
+      
+            /**
+             *  On load, called to load the auth2 library and API client library.
+             */
+            function handleClientLoad() {
+              gapi.load('client:auth2', initClient);
+            }
+      
+            /**
+             *  Initializes the API client library and sets up sign-in state
+             *  listeners.
+             */
+            function initClient() {
+              gapi.client.init({
+                clientId: CLIENT_ID,
+                discoveryDocs: DISCOVERY_DOCS,
+                scope: SCOPES
+              }).then(function () {
+                // Listen for sign-in state changes.
+                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+      
+                // Handle the initial sign-in state.
+                updateSigninStatus(gapi.auth2.getAuthInstance().isSignedIn.get());
+                authorizeButton.onclick = handleAuthClick;
+                signoutButton.onclick = handleSignoutClick;
+              }, function(error) {
+                appendPre(JSON.stringify(error, null, 2));
+              });
+            }
+      
+            /**
+             *  Called when the signed in status changes, to update the UI
+             *  appropriately. After a sign-in, the API is called.
+             */
+            function updateSigninStatus(isSignedIn) {
+              if (isSignedIn) {
+                authorizeButton.style.display = 'none';
+                signoutButton.style.display = 'block';
+                importButton.style.display = 'block';
+                exportButton.style.display = 'block';
+                //sign in action TODO
+              } else {
+                authorizeButton.style.display = 'block';
+                signoutButton.style.display = 'none';
+                importButton.style.display = 'none';
+                exportButton.style.display = 'none';
+              }
+            }
+      
+            /**
+             *  Sign in the user upon button click.
+             */
+            function handleAuthClick(event) {
+              gapi.auth2.getAuthInstance().signIn();
+            }
+      
+            /**
+             *  Sign out the user upon button click.
+             */
+            function handleSignoutClick(event) {
+              gapi.auth2.getAuthInstance().signOut();
+            }
+      
+            /**
+             * Append a pre element to the body containing the given message
+             * as its text node. Used to display the results of the API call.
+             *
+             * @param {string} message Text to be placed in pre element.
+             */
+            function appendPre(message) {
+              var pre = document.getElementById('content');
+              var textContent = document.createTextNode(message + '\n');
+              pre.appendChild(textContent);
+            }
+
+            function exportToSheets(ssArray){
+
+                alert(ssArray);
+                //import spreadsheet - use get function
+                //decode local history
+                var localArray = JSON.parse(localStorage.getItem("quantityString"));
+                alert(localArray);
+                //make array of new items
+                var appendArray = [];
+                //make array of updates
+                var updateArray = [];
+                //populate arrays from localArray using ssArray as comparison
+                alert("running export");
+                localArray.forEach(function(item){
+                    alert("running local array loop");
+
+                    var isMatch = false;
+
+                    ssArray.forEach(function(element){
+                        
+                        if(item[1] == element[1]) {
+                            updateArray.push(item);
+                            isMatch = true;
+                            alert("found true");
+                        }
+
+                    });
+
+                    if (isMatch == false) {
+                        appendArray.push(item);
+                        alert("stayed false");
+                    }
+                });
+                //append to sheet
+
+                appendArray.forEach((item) => {
+                    item.push("Others");
+                });
+
+                alert(appendArray);
+
+                var params = {
+                    // The ID of the spreadsheet to update.
+                    spreadsheetId: '1ZQzNxmRz8WeCIWd8aigNonrjO9q_u7epQxvaQgYkRTY',  // TODO: Update placeholder value.
+
+                    // The A1 notation of a range to search for a logical table of data.
+                    // Values will be appended after the last row of the table.
+                    range: 'Inventory!A5:C5',  // TODO: Update placeholder value.
+
+                    // How the input data should be interpreted.
+                    valueInputOption: 'USER_ENTERED',  // TODO: Update placeholder value.
+
+                    // How the input data should be inserted.
+                    insertDataOption: 'INSERT_ROWS',  // TODO: Update placeholder value.
+                };
+
+                var valueRangeBody = {
+                    range: 'Inventory!A5:C5',  // TODO: Update placeholder value.
+
+                    values: appendArray,
+
+                    majorDimension: 'ROWS',
+                };
+
+                var request = gapi.client.sheets.spreadsheets.values.append(params, valueRangeBody);
+                request.then(function(response) {
+                    // TODO: Change code below to process the `response` object:
+                }, function(reason) {
+                    console.error('error: ' + reason.result.error.message);
+                });
+
+                //update sheet - TODO: import array, replace in javascript
+                //update local ssArray
+                ssArray.forEach(function(item) {
+                    updateArray.forEach(function(element) {
+                        if (item[1] == element[1])
+                            item[2] += element[2];
+                    });
+                });
+
+                //replace spreadsheet data with ssArray data(updated)
+
+                params = {
+                    // The ID of the spreadsheet to update.
+                    spreadsheetId: '1ZQzNxmRz8WeCIWd8aigNonrjO9q_u7epQxvaQgYkRTY',  // TODO: Update placeholder value.
+
+                    // The A1 notation of the values to update.
+                    range: 'Inventory!A5:C',  // TODO: Update placeholder value.
+
+                    // How the input data should be interpreted.
+                    valueInputOption: 'USER_ENTERED',  // TODO: Update placeholder value.
+                };
+
+                valueRangeBody = {
+                    // TODO: Add desired properties to the request body. All existing properties
+                    // will be replaced.
+                    range: 'Inventory!A5:C',  // TODO: Update placeholder value.
+
+                    majorDimension: 'ROWS',
+
+                    values: ssArray,
+                };
+
+                request = gapi.client.sheets.spreadsheets.values.update(params, valueRangeBody);
+                request.then(function(response) {
+                    // TODO: Change code below to process the `response` object:
+                    console.log(response.result);
+                }, function(reason) {
+                    console.error('error: ' + reason.result.error.message);
+                });
+
+                //clear history
+                clearHistory();
+            }
+
+            function importFromSheet(callback){
+
+                var res;
+
+                var params = {
+                    // The ID of the spreadsheet to retrieve data from.
+                    spreadsheetId: '1ZQzNxmRz8WeCIWd8aigNonrjO9q_u7epQxvaQgYkRTY',
+
+                    // The A1 notation of the values to retrieve.
+                    range: 'A5:C',
+
+                    // How values should be represented in the output.
+                    // The default render option is ValueRenderOption.FORMATTED_VALUE.
+                    valueRenderOption: 'UNFORMATTED_VALUE',  // TODO: Update placeholder value.
+                };
+
+                var request = gapi.client.sheets.spreadsheets.values.get(params);
+                request.then(function(response) {
+                // TODO: Change code below to process the `response` object:
+                //code here
+                res = response.result.values;
+
+                callback(res);
+
+                }, function(reason) {
+                console.error('error: ' + reason.result.error.message);
+                });
+
+                
+
+            }
+
+            function loadArray(ssArray){
+
+                //import spreadsheet into array(?) use get
+                var acObject = new Object();
+                ssArray.forEach(function(item) {
+
+                    acObject[item[1]] = item[0];
+
+                });
+                //save object/array to localStorage
+                localStorage.setItem("titleIsbnString", (JSON.stringify(acObject)));
+            }
+
+            function clearHistory() {
+                localStorage.removeItem("quantityString");
+                localStorage.removeItem("listString");
+            }
+      
+          </script>
+      
+          <script async defer src="https://apis.google.com/js/api.js"
+            onload="this.onload=function(){};handleClientLoad()"
+            onreadystatechange="if (this.readyState === 'complete') this.onload()">
+          </script>
+
+    <script src="vendor/jquery-1.9.0.min.js" type="text/javascript"></script> <!-- load jquery -->
+    <script src="//webrtc.github.io/adapter/adapter-latest.js" type="text/javascript"></script> <!-- load webRTC adapter -->
+    <script src="../dist/quagga.js" type="text/javascript"></script> <!-- load quagga-->
+    <script src="live_w_locator.js" type="text/javascript"></script> <!-- load live locator js-->
+    <script>
+
+
+    function scanToHistory(){
+        //alert("function called");
+    const isbn = document.getElementById("isbnLanding").value;
+    const time = getTimestamp();
+    var qBuilder = parseInt(document.getElementById("q").value);
+    var dBuilder = document.getElementById("d");
+    dBuilder = dBuilder.options[dBuilder.selectedIndex].value;
+    dBuilder = (dBuilder == "add") ? 1 : -1;
+    const quantity = qBuilder * dBuilder;
+    const title = getTitle(isbn);
+
+    if (typeof(Storage) !== "undefined") {
+
+        if (localStorage.getItem("quantityString") !== null)
+        var quantityList = JSON.parse(localStorage.getItem("quantityString"));
+        else
+        var quantityList = [];
+        var quantityListItem = [[isbn, title, quantity]];
+        quantityList = quantityList.concat(quantityListItem);
+        localStorage.setItem("quantityString", JSON.stringify(quantityList));
+
+        var listArray = [];
+        const listItem = "" + time +" - Title: "+ title +" ISBN: "+ isbn +" Quantity: "+ quantity;
+        //alert("made list item: " + listItem);
+        if (localStorage.getItem("listString") !== null) {
+            if(typeof JSON.parse(localStorage.getItem("listString")) == "string"){
+            listArray = listArray.push(JSON.parse(localStorage.getItem("listString")));
+            //alert("was string");
+            //alert(listArray);
+            }else{
+            listArray = listArray.concat(JSON.parse(localStorage.getItem("listString")));
+            //alert("was array");
+            //alert(listArray);
+            }
+        }
+
+        listArray.push(listItem);
+        //alert(listArray);
+        localStorage.setItem("listString", JSON.stringify(listArray));
+
+    } else {
+        alert("Your browser does not support localStorage");
+    }
+    //alert("added to history");
+    }
+
+    function deleteLastEntry() {
+        if (typeof(Storage) !== "undefined") {
+            var listArray = JSON.parse(localStorage.getItem("listString"));
+            listArray.pop();
+            localStorage.setItem("listString", JSON.stringify(listArray));
+            var quantityArray = JSON.parse(localStorage.getItem("quantityString"));
+            quantityArray.pop();
+            localStorage.setItem("quantityString", JSON.stringify(quantityArray));
+            if (listArray.length == 0) {
+                localStorage.removeItem("listString");
+                localStorage.removeItem("quantityString");
+            }
+        }
+    }
+
+    function getTitle(isbn){
+
+        if (localStorage.getItem("titleIsbnString") !== null){
+            var isbnDataSet = JSON.parse(localStorage.getItem("titleIsbnString"));
+        }
+        else{
+            var isbnDataSet = {};
+        }
+
+        var titles = [];
+        var lastTitle;
+        for(var title in isbnDataSet){
+            if(isbnDataSet[title] == isbn){
+                titles.push(title);
+                lastTitle = title;
+            }
+        }
+
+        if (titles.length == 1){
+            return(titles[0]);
+        }else if (titles.length == 0){
+            return(prompt("Title not found, enter title:\nPut type of item at the end of title in square brackets.\nEG: Clockwork Girl [Hard Cover]"));
+        }else{
+            var message = "Enter index of title from list:\n";
+            var count = 0;
+            titles.forEach(element => {
+                message += "" + count + " - ";
+                message += element + "\n";
+                count++;
+            });
+            var index = prompt(message);
+            return titles[index];
+        }
+
+    var x = "Got Title Failed";
+    return(x);
+    }
+
+    function getTimestamp() {
+    var today = new Date();
+    var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+    var dateTime = date+' '+time;
+    return (dateTime);
+    }
+</script>
+    <!-- Load React. -->
+    <!-- Note: when deploying, replace "development.js" with "production.min.js". -->
+    <script src="https://unpkg.com/react@16/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Load React Component.-->
+    <script src="history_list.js"></script>
+  </body>
+</html>

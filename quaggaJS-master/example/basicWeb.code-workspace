@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "/Users/luximationstudios/Desktop/arcana-scan-test/arc-barcode"
+		},
+		{
+			"path": "/Users/luximationstudios/Desktop/arcana-scan-test/arc-boogga"
+		},
+		{
+			"path": "/Users/luximationstudios/Desktop/arcana-scan-test/test2/quaggaJS-master"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "quaggaJS-master"
+	}
+}
