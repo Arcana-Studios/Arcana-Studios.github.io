@@ -226,19 +226,19 @@
 
             function exportToSheets(ssArray){
 
-                alert(ssArray);
+                //alert(ssArray);
                 //import spreadsheet - use get function
                 //decode local history
                 var localArray = JSON.parse(localStorage.getItem("quantityString"));
-                alert(localArray);
+                //alert(localArray);
                 //make array of new items
                 var appendArray = [];
                 //make array of updates
                 var updateArray = [];
                 //populate arrays from localArray using ssArray as comparison
-                alert("running export");
+                //alert("running export");
                 localArray.forEach(function(item){
-                    alert("running local array loop");
+                    //alert("running local array loop");
 
                     var isMatch = false;
 
@@ -247,14 +247,14 @@
                         if(item[1] == element[1]) {
                             updateArray.push(item);
                             isMatch = true;
-                            alert("found true");
+                            //alert("found true");
                         }
 
                     });
 
                     if (isMatch == false) {
                         appendArray.push(item);
-                        alert("stayed false");
+                        //alert("stayed false");
                     }
                 });
                 //append to sheet
@@ -263,7 +263,7 @@
                     item.push("Others");
                 });
 
-                alert(appendArray);
+                //alert(appendArray);
 
                 var params = {
                     // The ID of the spreadsheet to update.
